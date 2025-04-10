@@ -1,5 +1,6 @@
 //#include "jni_exports.h"
 #include <jni.h>
+#include <string.h>
 
 #ifndef MAX_FILE_NAME_LENGTH
 // 17 is strlen(123.txt.digested) + 1 for the terminating zero byte
@@ -23,7 +24,16 @@ JNIEXPORT jlong JNICALL Java_ChecksumCalculator_calculateChecksum
     // Get the source file name
     src_filename = (*jniEnv)->GetStringUTFChars(jniEnv, filename, NULL);
 
-    // Get the name of the file to write checksum to (and "accidentally" overflow the buffer)
+    // Check if the resulting destination filename would be too long
+    // We need room for the source filename + ".digested" + null terminator
+    if (strlen(src_filename) + 9 >= MAX_FILE_NAME_LENGTH) {
+        // Filename too long - return 0 to indicate an error
+        (*jniEnv)->ReleaseStringUTFChars(jniEnv, filename, src_filename);
+        printf("Filename too long for buffer of size %d\n", MAX_FILE_NAME_LENGTH);
+        return 0;
+    }
+
+    // Get the name of the file to write checksum to
     sprintf(dst_filename, "%s.digested", src_filename);
 
     // Write the checksum to the destination file and also get its value
@@ -36,3 +46,4 @@ JNIEXPORT jlong JNICALL Java_ChecksumCalculator_calculateChecksum
 
     return result;
 }
+
